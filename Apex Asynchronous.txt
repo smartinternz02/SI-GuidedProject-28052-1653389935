@@ -1,0 +1,90 @@
+											Asynchronous Apex
+
+Use Future Methods
+
+AccountProcessor
+public class AccountProcessor {
+    @future
+    public static void countContacts(List<id> accountIds){
+        List<Account> accountsToUpdate =new List<Account>();
+        List<Account> accounts =[Select Id,Name, (Select Id from Contacts) from Account Where Id in:accountIds];
+        For(Account acc:accounts){
+ List<Contact> contactList=acc.Contacts;
+            acc.Number_Of_Contacts__c =contactList.size();
+            accountsToUpdate.add(acc);
+        }
+update accountsToUpdate;        
+        
+    }
+
+}
+
+
+AccountProcessorTest
+@IsTest
+private class AccountProcessorTest {
+@IsTest
+    private static void testCountContacts(){
+        Account newAccount= new Account(Name='Test Account');
+        insert newAccount;
+        
+        Contact newContact1 =new Contact(FirstName='John',LastName='Doe',AccountId=newAccount.Id);
+        insert newContact1;
+        
+        Contact newContact2 =new Contact(FirstName='Jane',LastName='Doe',AccountId=newAccount.Id);
+        insert newContact2;
+        
+        List<Id> accountsId =new List<Id>();
+        accountsId.add(newAccount.Id);
+        Test.startTest();
+AccountProcessor.countContacts(accountsId);
+Test.stopTest();
+    }
+}
+			Use Batch Apex
+
+
+LeadProcessor
+global class LeadProcessor implements Database.Batchable<sObject>{
+    global Integer count=0;
+    global Database.QueryLocator start(Database.BatchableContext bc){
+        return Database.getQueryLocator('SELECT ID, LeadSource FROM Lead');
+        }
+    global void execute (Database.BatchableContext bc, List<Lead> L_list){
+        List<lead> L_list_new =new List<Lead>();
+        for(lead L:L_list){
+            L.leadsource='Dreamforce';
+            L_list_new.add(L);
+            count+=1;
+           }
+        update L_list_new;
+    }
+  global void finish(Database.BatchableContext bc){
+        system.debug('count= '+count);
+        
+    }
+}
+LeadProcessorTest
+@isTest
+public class LeadProcessorTest {
+    @isTest
+    public static void testit(){
+        List<lead> L_list =new List<lead>();
+        for(Integer i=0;i<200;i++){
+            Lead l=new lead();
+            L.lastName ='name'+i;
+            L.Company='Company';
+            L.Status='Random Status';
+            L_list.add(L);
+        }
+        insert L_list;
+        
+        Test.startTest();
+        LeadProcessor lp=new LeadProcessor();
+        	Id batchId=Database.executeBatch(lp);
+                Test.stopTest();
+    }
+}
+
+						
+
